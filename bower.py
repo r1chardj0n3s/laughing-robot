@@ -5,7 +5,6 @@ https://docs.google.com/document/d/17Nzv7onwsFYQU2ompvzNI9cCBczVHntWMiAn4zDip1w
 
 '''
 import os
-import subprocess
 from urllib import parse
 import posixpath
 import zipfile
@@ -13,6 +12,7 @@ import tempfile
 import shutil
 import json
 
+import github3
 import requests
 import semantic_version
 
@@ -28,22 +28,41 @@ def locate_component_dir():
     return component_dir
 
 
-class GitHubDownload:
-    def __init__(self, repos_url, version_tag, semver):
+class GitHubRepos:
+    def __init__(self, repos_url):
         self.repos_url = repos_url
-        self.version_tag = version_tag
-        self.semver = semver
+
+        o = parse.urlparse(self.repos_url)
+        # github.com/<owner>/<project>.git
+        self.owner, self.project = posixpath.split(o.path[1:])
+        self.project = self.project[:-4]
 
     def __str__(self):
-        return '{} at {}'.format(self.version_tag, self.repos_url)
+        return self.repos_url
 
-    def download_url(self):
-        o = parse.urlparse(self.repos_url)
-        # github.com/<user>/<project>.git
-        user, project = posixpath.split(o.path)
-        project = project[:-4]
-        return 'https://github.com/{}/{}/archive/{}.zip'.format(
-            user, project, self.version_tag)
+    def find(self, version=None):
+        tags = []
+        repos = github3.GitHub().repository(self.owner, self.project)
+        for tag in repos.iter_tags():
+            version_tag = tag.name
+            # so far all tags appear to prepend "v" to version
+            if version_tag[0] == 'v':
+                actual_version = version_tag[1:]
+            else:
+                actual_version = version_tag
+            try:
+                semver = semantic_version.Version(actual_version)
+            except ValueError:
+                # bad semver, no cookie
+                continue
+            if version in (version_tag, actual_version):
+                return tag.zipball_url
+            if semver.prerelease or semver.build:
+                continue
+            tags.append((semver, tag))
+
+        tags.sort()
+        return tags[-1][1].zipball_url
 
 
 class Project:
@@ -55,40 +74,14 @@ class Project:
         '''
         result = requests.get(API_URL + '/packages/' + self.name).json()
 
-        assert result['url'].startswith('git:/')
+        assert result['url'].startswith('git://github.com')
 
         print('found repository {}'.format(result['url']))
 
-        # TODO alternative to the following: use github3.py for git:/github...
-
-        command = 'git ls-remote --tags {}'.format(result['url'])
-        tags = []
-        for line in subprocess.getoutput(command).splitlines():
-            try:
-                hash, ref = line.strip().split()
-            except ValueError as e:
-                print('error {} parsing "{}"'.format(e, line))
-            version_tag = ref[10:]
-            # so far all tags appear to prepend "v" to version
-            assert version_tag[0] == 'v'
-            try:
-                semver = semantic_version.Version(version_tag[1:])
-            except ValueError:
-                # bad semver, no cookie
-                continue
-            if version in (version_tag, version_tag[1:]):
-                return GitHubDownload(result['url'], version_tag, semver)
-            if semver.prerelease or semver.build:
-                continue
-            tags.append((semver, version_tag))
-
-        tags.sort()
-        semver, version_tag = tags[-1]
-        return GitHubDownload(result['url'], version_tag, semver)
+        return GitHubRepos(result['url']).find(version)
 
     def fetch(self, version=None):
-        download = self.find(version)
-        url = download.download_url()
+        url = self.find(version)
         print('downloading from {}'.format(url))
         response = requests.get(url, stream=True)
         with tempfile.TemporaryFile() as f:
