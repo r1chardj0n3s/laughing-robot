@@ -13,7 +13,7 @@ class GitHubRepos:
         self.repos_url = repos_url
 
         o = parse.urlparse(self.repos_url)
-        # github.com/<owner>/<project>.git
+        # github.com/<owner>/<project>[.git]
         self.owner, self.project = posixpath.split(o.path[1:])
         if self.project.endswith('.git'):
             self.project = self.project[:-4]

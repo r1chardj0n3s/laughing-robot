@@ -74,7 +74,7 @@ class Project:
             if bower_json in contents.namelist():
                 meta = json.loads(contents.read(bower_json).decode('utf8'))
             else:
-                meta = {'ignore': []}
+                meta = {}
             for name in contents.namelist():
                 # ASSUMPTION: the zip files are created on Unix by github
                 # thus paths are unix separated and follow consistent structure
@@ -85,7 +85,7 @@ class Project:
                 dest_name = '/'.join(name.split('/')[1:])
 
                 if any(dest_name.split('/')[0] == ignore_path
-                        for ignore_path in meta['ignore']):
+                        for ignore_path in meta.get('ignore', [])):
                     continue
 
                 source = contents.open(name)

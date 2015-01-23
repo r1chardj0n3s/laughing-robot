@@ -21,14 +21,14 @@ No dependencies are handled. Versions must be pinned.
 INSTALLATION
 ------------
 
-This will work::
+This will work, preferably installed into a virtualenv::
 
-   pip install --user bower.py
+   pip install bower.py
    bower.py <command>
 
-But this is slightly more self-contained::
+This is even more self-contained::
 
-   pip install --user vex
+   pip install vex
    vex -m bower pip install bower.py
    vex bower bower.py <command>
 
