@@ -73,11 +73,9 @@ class Project:
         '''Fetch the remote metadata blob for the named package.
         '''
         result = requests.get(API_URL + '/packages/' + self.name).json()
-
-        assert result['url'].startswith('git://github.com')
-
         print('found repository {}'.format(result['url']))
 
+        assert result['url'].startswith('git://github.com')
         return GitHubRepos(result['url']).find(version)
 
     def fetch(self, version=None):

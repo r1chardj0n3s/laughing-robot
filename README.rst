@@ -19,6 +19,15 @@ No dependencies are handled. Versions must be pinned.
 
 
 
+Things I Learned About Bower
+----------------------------
+
+1. bower supports git, svn, http static files, but in reality it supports
+   github.com
+2. bower "packages" don't even need to supply a bower.json
+
+
+
 ------------
 
 Copyright 2015, Richard Jones <richard@mechanicalcat.net>
