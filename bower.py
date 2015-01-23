@@ -59,6 +59,8 @@ class Project:
 
         print('found repository {}'.format(result['url']))
 
+        # TODO alternative to the following: use github3.py for git:/github...
+
         command = 'git ls-remote --tags {}'.format(result['url'])
         tags = []
         for line in subprocess.getoutput(command).splitlines():
@@ -99,8 +101,11 @@ class Project:
                 shutil.rmtree(dest_path)
 
             contents = zipfile.ZipFile(f)
-            meta = json.loads(contents.read(contents.namelist()[0]
-                                           + 'bower.json').decode('utf8'))
+            bower_json = contents.namelist()[0] + 'bower.json'
+            if bower_json in contents.namelist():
+                meta = json.loads(contents.read(bower_json).decode('utf8'))
+            else:
+                meta = {'ignore': []}
             for name in contents.namelist():
                 # ASSUMPTION: the zip files are created on Unix by github
                 # thus paths are unix separated and follow consistent structure
