@@ -5,17 +5,18 @@ https://docs.google.com/document/d/17Nzv7onwsFYQU2ompvzNI9cCBczVHntWMiAn4zDip1w
 
 '''
 import os
-from urllib import parse
-import posixpath
+import sys
 import zipfile
 import tempfile
 import shutil
 import json
+import logging
 
-import github3
 import requests
-import semantic_version
 
+from bowerlib.github import GitHubRepos
+
+log = logging.getLogger(__name__)
 
 # http://stackoverflow.com/questions/19069093/what-is-the-official-bower-registry-url
 API_URL = "https://bower.herokuapp.com"
@@ -28,43 +29,6 @@ def locate_component_dir():
     return component_dir
 
 
-class GitHubRepos:
-    def __init__(self, repos_url):
-        self.repos_url = repos_url
-
-        o = parse.urlparse(self.repos_url)
-        # github.com/<owner>/<project>.git
-        self.owner, self.project = posixpath.split(o.path[1:])
-        self.project = self.project[:-4]
-
-    def __str__(self):
-        return self.repos_url
-
-    def find(self, version=None):
-        tags = []
-        repos = github3.GitHub().repository(self.owner, self.project)
-        for tag in repos.iter_tags():
-            version_tag = tag.name
-            # so far all tags appear to prepend "v" to version
-            if version_tag[0] == 'v':
-                actual_version = version_tag[1:]
-            else:
-                actual_version = version_tag
-            try:
-                semver = semantic_version.Version(actual_version)
-            except ValueError:
-                # bad semver, no cookie
-                continue
-            if version in (version_tag, actual_version):
-                return tag.zipball_url
-            if semver.prerelease or semver.build:
-                continue
-            tags.append((semver, tag))
-
-        tags.sort()
-        return tags[-1][1].zipball_url
-
-
 class Project:
     def __init__(self, name):
         self.name = name
@@ -72,15 +36,29 @@ class Project:
     def find(self, version=None):
         '''Fetch the remote metadata blob for the named package.
         '''
-        result = requests.get(API_URL + '/packages/' + self.name).json()
-        print('found repository {}'.format(result['url']))
+        response = requests.get(API_URL + '/packages/' + self.name)
+        if response.status_code != 200:
+            logging.error('could not find package %s', self.name)
+            sys.exit(1)
 
+        try:
+            result = response.json()
+        except ValueError:
+            fn = '/tmp/bower-py-json.txt'
+            with open(fn, 'wb') as f:
+                f.write(response.raw.read())
+            log.exception('error parsing JSON (see %s)', fn)
+            sys.exit(1)
+
+        log.info('found repository {}'.format(result['url']))
         assert result['url'].startswith('git://github.com')
         return GitHubRepos(result['url']).find(version)
 
     def fetch(self, version=None):
         url = self.find(version)
-        print('downloading from {}'.format(url))
+        if url is None:
+            sys.exit(1)
+        log.info('downloading from {}'.format(url))
         response = requests.get(url, stream=True)
         with tempfile.TemporaryFile() as f:
             for chunk in response.iter_content(1024):
@@ -118,7 +96,12 @@ class Project:
                 with source, target:
                     shutil.copyfileobj(source, target)
 
-if __name__ == '__main__':
-    import sys
+
+def main():
+    logging.basicConfig()
     if sys.argv[1] == 'install':
         Project(sys.argv[2]).fetch(sys.argv[3] if len(sys.argv) > 3 else None)
+
+
+if __name__ == '__main__':
+    main()
