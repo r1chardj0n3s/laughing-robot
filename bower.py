@@ -39,7 +39,6 @@ class GitHubDownload:
 
     def download_url(self):
         o = parse.urlparse(self.repos_url)
-        print(o)
         # github.com/<user>/<project>.git
         user, project = posixpath.split(o.path)
         project = project[:-4]
@@ -103,13 +102,15 @@ class Project:
             meta = json.loads(contents.read(contents.namelist()[0]
                                            + 'bower.json').decode('utf8'))
             for name in contents.namelist():
+                # ASSUMPTION: the zip files are created on Unix by github
+                # thus paths are unix separated and follow consistent structure
                 if name[-1] == '/':
                     continue
                 assert name[0] != '/'
                 assert not name.startswith('..')
                 dest_name = '/'.join(name.split('/')[1:])
 
-                if any(os.path.commonprefix([dest_name, ignore_path])
+                if any(dest_name.split('/')[0] == ignore_path
                         for ignore_path in meta['ignore']):
                     continue
 
@@ -123,4 +124,5 @@ class Project:
 
 if __name__ == '__main__':
     import sys
-    Project(sys.argv[1]).fetch()
+    if sys.argv[1] == 'install':
+        Project(sys.argv[2]).fetch(sys.argv[3] if len(sys.argv) > 3 else None)

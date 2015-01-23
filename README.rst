@@ -2,8 +2,13 @@ The Laughing Robot
 ------------------
 
 
-Or, why I learned not to rewrite bower in Python.
+Or, how I learned not to rewrite bower in Python.
 
+Very basic usage is implemented:
+
+  bower.py install <package> [version]
+
+No dependencies are handled. Versions must be pinned.
 
 
 
