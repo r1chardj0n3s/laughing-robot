@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 from codecs import open
 from os import path
 
@@ -10,7 +10,6 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='bower.py',
     version='1.0',
-
     description='A sample Python project',
     long_description=long_description,
     url='https://github.com/r1chardj0n3s/laughing-robot',
@@ -26,7 +25,7 @@ setup(
     ],
     keywords='bower javascript',
     install_requires=['requests', 'semantic_version', 'github3.py'],
-    packages=find_packages(),
+    packages=['bowerlib'],
     entry_points={
         'console_scripts': [
             'bower.py = bowerlib.main:main',

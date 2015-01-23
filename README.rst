@@ -18,6 +18,20 @@ Very basic usage is implemented:
 No dependencies are handled. Versions must be pinned.
 
 
+INSTALLATION
+------------
+
+This will work::
+
+   pip install --user bower.py
+   bower.py <command>
+
+But this is slightly more self-contained::
+
+   pip install --user vex
+   vex -m bower pip install bower.py
+   vex bower bower.py <command>
+
 
 Things I Learned About Bower
 ----------------------------
