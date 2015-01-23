@@ -4,6 +4,13 @@ The Laughing Robot
 
 Or, how I learned not to rewrite bower in Python.
 
+To answer the first, obvious question:
+
+    *Why?*
+
+    To allow Python developers/users access to bower components without 
+    requiring a node.js / npm infrastructure.
+
 Very basic usage is implemented:
 
   bower.py install <package> [version]
